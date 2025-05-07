@@ -29,30 +29,30 @@ PID rollPID(rollConfig);
 
 
 void setup() {
-  Serial.begin(9600);
-  Wire.begin();
-  
-  // Initialize MPU6050
-  byte status = mpu.begin();
-  Serial.print(F("MPU6050 status: "));
-  Serial.println(status);
-  while (status != 0) { } // stop everything if could not connect to MPU6050
-  Serial.println(F("Calculating offsets, do not move MPU6050"));
-  delay(1000);
-  mpu.calcOffsets(); // gyro and accelero
-  Serial.println("Done!n");
-  
-  // Set actuator control pins
-  pinMode(ACT1_EXTEND, OUTPUT);
-  pinMode(ACT1_RETRACT, OUTPUT);
-  pinMode(ACT2_EXTEND, OUTPUT);
-  pinMode(ACT2_RETRACT, OUTPUT);
-  
-  Serial.println("System Ready");
+    Serial.begin(9600);
+    Wire.begin();
+
+    // Initialize MPU6050
+    byte status = mpu.begin();
+    Serial.print(F("MPU6050 status: "));
+    Serial.println(status);
+    while (status != 0) { } // stop everything if could not connect to MPU6050
+    Serial.println(F("Calculating offsets, do not move MPU6050"));
+    delay(1000);
+    mpu.calcOffsets(); // gyro and accelero
+    Serial.println("Done!n");
+
+    // Set actuator control pins
+    pinMode(ACT1_EXTEND, OUTPUT);
+    pinMode(ACT1_RETRACT, OUTPUT);
+    pinMode(ACT2_EXTEND, OUTPUT);
+    pinMode(ACT2_RETRACT, OUTPUT);
+
+    Serial.println("System Ready");
 }
 
 void loop() {
-  mpu.update();
+    mpu.update();
     float pitch = mpu.getAngleX();
     // Serial.print("X : ");
     // Serial.print(mpu.getAngleX());
@@ -60,38 +60,38 @@ void loop() {
     // Serial.print(" Y : ");
     // Serial.println(mpu.getAngleY());
     timer = millis();
-  
-  // Compute PID adjustments
-  float pitchAdjustment = pitchPID.compute(pitch); // Invert if needed
-  float rollAdjustment = rollPID.compute(-roll);
-  
-  // Apply to actuators
-  controlActuator(ACT1_EXTEND, ACT1_RETRACT, ACT1_CON, pitchAdjustment - rollAdjustment);  // Actuator 1 controls roll
-  controlActuator(ACT2_EXTEND, ACT2_RETRACT, ACT2_CON, pitchAdjustment + rollAdjustment); // Actuator 2 controls pitch
-  
-  // Debug output
-  Serial.print("Pitch: "); Serial.print(pitch);
-  Serial.print(" | Roll: "); Serial.print(roll);
-  Serial.print(" | PID Out: "); Serial.print(pitchAdjustment); 
-  Serial.print(", "); Serial.println(rollAdjustment);
-  
-  delay(20); // ~50Hz control loop
+
+    // Compute PID adjustments
+    float pitchAdjustment = pitchPID.compute(pitch); // Invert if needed
+    float rollAdjustment = rollPID.compute(-roll);
+
+    // Apply to actuators
+    controlActuator(ACT1_EXTEND, ACT1_RETRACT, ACT1_CON, pitchAdjustment - rollAdjustment);  // Actuator 1 controls roll
+    controlActuator(ACT2_EXTEND, ACT2_RETRACT, ACT2_CON, pitchAdjustment + rollAdjustment); // Actuator 2 controls pitch
+
+    // Debug output
+    Serial.print("Pitch: "); Serial.print(pitch);
+    Serial.print(" | Roll: "); Serial.print(roll);
+    Serial.print(" | PID Out: "); Serial.print(pitchAdjustment);
+    Serial.print(", "); Serial.println(rollAdjustment);
+
+    delay(20); // ~50Hz control loop
 }
 
 // Controls a single actuator based on PID output
 void controlActuator(int extendPin, int retractPin, int conPin, float pidOutput) {
-  if (pidOutput > 0) {
-    analogWrite(conPin, min(fabsf(pidOutput), 255.f)); // Extend (PWM)
-    digitalWrite(extendPin, HIGH);
-    digitalWrite(retractPin, LOW);
-  } 
-  else if (pidOutput < 0) {
-    digitalWrite(extendPin, LOW);
-    digitalWrite(retractPin, HIGH);
-    analogWrite(conPin, min(fabsf(pidOutput), 255.f)); // Extend (PWM)
-  } 
-  else {
-    digitalWrite(extendPin, LOW); // Stop
-    digitalWrite(retractPin, LOW);
-  }
+    if (pidOutput > 20) {
+        analogWrite(conPin, max(128, min(fabsf(pidOutput), 255.f))); // Extend (PWM)
+        digitalWrite(extendPin, HIGH);
+        digitalWrite(retractPin, LOW);
+    }
+    else if (pidOutput < -20) {
+        digitalWrite(extendPin, LOW);
+        digitalWrite(retractPin, HIGH);
+        analogWrite(conPin, max(128, min(fabsf(pidOutput), 255.f))); // Extend (PWM)
+    }
+    else {
+        digitalWrite(extendPin, LOW); // Stop
+        digitalWrite(retractPin, LOW);
+    }
 }
